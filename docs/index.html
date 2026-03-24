@@ -228,6 +228,65 @@
     .app-name {
       display: none !important;
     }
+    /* ── Cover page styling ── */
+    section.cover {
+      background: #111410 !important;
+      color: #EDDFCC !important;
+    }
+    section.cover h1 {
+      color: #EDDFCC !important;
+      font-weight: 700 !important;
+      font-size: 2.5rem !important;
+      margin: 0.5rem 0 !important;
+    }
+    section.cover blockquote p {
+      color: #8BB888 !important;
+      font-size: 1.15rem !important;
+    }
+    section.cover ul {
+      list-style: none !important;
+      padding: 0 !important;
+      max-width: 500px !important;
+      margin: 1.5rem auto !important;
+      text-align: left !important;
+    }
+    section.cover ul li {
+      color: #c4b8a4 !important;
+      padding: 4px 0 !important;
+      font-size: 0.95rem !important;
+    }
+    section.cover ul li::before {
+      content: "→ " !important;
+      color: #8BB888 !important;
+    }
+    section.cover .cover-main > p:last-of-type a {
+      border-radius: 9999px !important;
+      padding: 0.6rem 1.8rem !important;
+      font-size: 0.85rem !important;
+      font-weight: 500 !important;
+      text-transform: none !important;
+      transition: all 0.15s ease !important;
+      border: 1px solid rgba(139, 184, 136, 0.3) !important;
+    }
+    section.cover .cover-main > p:last-of-type a:first-child {
+      background: #8BB888 !important;
+      color: #111410 !important;
+      border-color: #8BB888 !important;
+    }
+    section.cover .cover-main > p:last-of-type a:first-child:hover {
+      background: #9cc89a !important;
+    }
+    section.cover .cover-main > p:last-of-type a:not(:first-child) {
+      color: #c4b8a4 !important;
+    }
+    section.cover .cover-main > p:last-of-type a:not(:first-child):hover {
+      color: #EDDFCC !important;
+      border-color: rgba(139, 184, 136, 0.5) !important;
+    }
+    /* Hide topbar on cover */
+    body.close .mas-topbar {
+      display: flex;
+    }
   </style>
 </head>
 <body>
@@ -267,6 +326,8 @@
       name: 'Mobile Agent Studio',
       repo: '',
       basePath: window.location.pathname.includes('/MAS/') ? '/MAS/' : '/',
+      coverpage: true,
+      onlyCover: true,
       loadSidebar: true,
       alias: {
         '/.*/_sidebar.md': '/_sidebar.md',
