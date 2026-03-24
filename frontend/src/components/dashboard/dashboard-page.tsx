@@ -5,7 +5,7 @@ import { PhoneCard, CARD_HEIGHT } from './phone-card';
 import { PlaybackCard } from './playback-card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Smartphone, Wifi, WifiOff, Bot, Film, Key, LogOut } from 'lucide-react';
+import { Plus, Smartphone, Wifi, WifiOff, Bot, Film, Key, LogOut, BookOpen } from 'lucide-react';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -55,6 +55,11 @@ export function DashboardPage() {
               {loading ? 'Starting...' : 'New Phone'}
             </Button>
             <div className="w-px h-5 bg-border" />
+            <a href="http://localhost:3001" target="_blank" rel="noopener noreferrer" title="Documentation">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5" />
+              </Button>
+            </a>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/settings/api-keys')} title="API Keys">
               <Key className="h-3.5 w-3.5" />
             </Button>
