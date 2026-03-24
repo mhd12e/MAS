@@ -14,8 +14,8 @@
 - Full REST API with streaming SSE & sync endpoints
 - Automatic screen recording for every task
 
-[Get Started](getting-started/installation.md)
-[API Reference](api/phones.md)
+[Get Started](#/getting-started/installation)
+[API Reference](#/api/phones)
 [GitHub](https://github.com/mhd12e/MAS)
 
 ![color](#111410)
