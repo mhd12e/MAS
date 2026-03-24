@@ -1,22 +1,22 @@
-# Mobile Agent Studio
-
-> AI-powered Android phone automation platform.
-
-Create virtual Android phones and control them with natural language. The AI agent reads the screen, taps buttons, types text, installs apps, and reports back — all through a REST API.
-
-```mermaid
-graph LR
-    YOU["Your Code"] -->|"REST API"| MAS["Mobile Agent Studio"]
-    MAS -->|"AI Agent"| PHONE["Virtual Android Phone"]
-    PHONE -->|"Screenshot"| MAS
-    MAS -->|"Result"| YOU
-
-    style YOU fill:#8BB888,stroke:#6a9966,color:#111
-    style MAS fill:#2b6cb0,stroke:#63b3ed,color:#fff
-    style PHONE fill:#4a5568,stroke:#a0aec0,color:#fff
-```
-
----
+<div class="mas-hero">
+  <div class="mas-hero-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+  </div>
+  <h1>Mobile Agent Studio</h1>
+  <div class="mas-hero-tagline">AI-powered Android phone automation platform</div>
+  <ul class="mas-hero-features">
+    <li>Create virtual Android phones on demand</li>
+    <li>Control them with natural language via Claude AI</li>
+    <li>Live screen streaming, real-time chain-of-thought</li>
+    <li>Full REST API with streaming SSE & sync endpoints</li>
+    <li>Automatic screen recording for every task</li>
+  </ul>
+  <div class="mas-hero-buttons">
+    <a href="#/getting-started/installation" class="primary">Get Started</a>
+    <a href="#/api/phones">API Reference</a>
+    <a href="https://github.com/mhd12e/MAS" target="_blank">GitHub</a>
+  </div>
+</div>
 
 ## Getting Started
 

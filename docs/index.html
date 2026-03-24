@@ -228,71 +228,80 @@
     .app-name {
       display: none !important;
     }
-    /* ── Cover page styling ── */
-    section.cover {
-      background: #111410 !important;
-      background-image: none !important;
+    /* ── Hero section (in README.md) ── */
+    .mas-hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      border-bottom: 1px solid #282B27;
+      margin-bottom: 32px;
     }
-    section.cover .mask {
-      background: #111410 !important;
-      background-image: none !important;
-      opacity: 1 !important;
+    .mas-hero-icon {
+      display: inline-flex;
+      height: 64px;
+      width: 64px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: rgba(139, 184, 136, 0.1);
+      border: 1px solid rgba(139, 184, 136, 0.2);
+      color: #8BB888;
+      margin-bottom: 16px;
     }
-    section.cover .cover-main {
-      text-align: center !important;
-    }
-    section.cover h1 {
+    .mas-hero h1 {
       color: #EDDFCC !important;
+      font-size: 2.2rem !important;
       font-weight: 700 !important;
-      font-size: 2.5rem !important;
-      margin: 0.5rem 0 !important;
+      margin: 0 0 8px !important;
+      border: none !important;
     }
-    section.cover blockquote {
-      text-align: center !important;
+    .mas-hero-tagline {
+      color: #8BB888;
+      font-size: 1.1rem;
+      margin-bottom: 24px;
     }
-    section.cover blockquote p {
-      color: #8BB888 !important;
-      font-size: 1.15rem !important;
-    }
-    section.cover ul {
+    .mas-hero-features {
       list-style: none !important;
       padding: 0 !important;
-      max-width: 500px !important;
-      margin: 1.5rem auto !important;
-      text-align: center !important;
+      margin: 0 auto 28px !important;
+      max-width: 420px;
     }
-    section.cover ul li {
-      color: #c4b8a4 !important;
-      padding: 4px 0 !important;
-      font-size: 0.95rem !important;
+    .mas-hero-features li {
+      color: #c4b8a4;
+      padding: 3px 0;
+      font-size: 0.92rem;
     }
-    section.cover ul li::before {
-      content: "→ " !important;
-      color: #8BB888 !important;
+    .mas-hero-features li::before {
+      content: "→ ";
+      color: #8BB888;
     }
-    section.cover .cover-main > p:last-of-type a {
-      border-radius: 9999px !important;
-      padding: 0.6rem 1.8rem !important;
-      font-size: 0.85rem !important;
-      font-weight: 500 !important;
-      text-transform: none !important;
-      transition: all 0.15s ease !important;
-      border: 1px solid rgba(139, 184, 136, 0.3) !important;
+    .mas-hero-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    section.cover .cover-main > p:last-of-type a:first-child {
-      background: #8BB888 !important;
-      color: #111410 !important;
-      border-color: #8BB888 !important;
+    .mas-hero-buttons a {
+      display: inline-block;
+      padding: 10px 24px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-decoration: none !important;
+      transition: all 0.15s ease;
+      border: 1px solid rgba(139, 184, 136, 0.3);
+      color: #c4b8a4;
     }
-    section.cover .cover-main > p:last-of-type a:first-child:hover {
-      background: #9cc89a !important;
+    .mas-hero-buttons a:hover {
+      color: #EDDFCC;
+      border-color: rgba(139, 184, 136, 0.5);
     }
-    section.cover .cover-main > p:last-of-type a:not(:first-child) {
-      color: #c4b8a4 !important;
+    .mas-hero-buttons a.primary {
+      background: #8BB888;
+      color: #111410;
+      border-color: #8BB888;
     }
-    section.cover .cover-main > p:last-of-type a:not(:first-child):hover {
-      color: #EDDFCC !important;
-      border-color: rgba(139, 184, 136, 0.5) !important;
+    .mas-hero-buttons a.primary:hover {
+      background: #9cc89a;
     }
   </style>
 </head>
@@ -333,8 +342,7 @@
       name: 'Mobile Agent Studio',
       repo: '',
       basePath: window.location.pathname.includes('/MAS/') ? '/MAS/' : '/',
-      coverpage: true,
-      onlyCover: false,
+      coverpage: false,
       loadSidebar: true,
       alias: {
         '/.*/_sidebar.md': '/_sidebar.md',
