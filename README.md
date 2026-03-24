@@ -4,18 +4,73 @@ AI-powered phone automation. Create virtual Android phones and control them with
 
 ## Prerequisites
 
-- Android SDK with emulator (`~/Android/Sdk`)
-- A base AVD created in Android Studio (default: `Pixel_9_Pro_XL`)
-- Node.js 18+ and pnpm
-- Python 3.11-3.13 with venv
-- System packages:
-  ```bash
-  # Fedora
-  sudo dnf install -y xorg-x11-server-Xvfb x11vnc novnc python3-websockify xdotool ffmpeg
+You need all of the following installed before setup:
 
-  # Ubuntu / Debian
-  sudo apt install -y xvfb x11vnc novnc websockify xdotool ffmpeg
-  ```
+### Android Studio + SDK
+
+Download from [developer.android.com/studio](https://developer.android.com/studio). During installation, make sure to include:
+- Android SDK
+- Android Emulator
+- Android SDK Platform-Tools
+
+After installation, the SDK is typically at:
+- **Linux:** `~/Android/Sdk`
+- **macOS:** `~/Library/Android/sdk`
+
+Verify with:
+```bash
+ls ~/Android/Sdk/emulator/emulator   # should exist
+adb --version                         # should print a version
+```
+
+### Base AVD (Virtual Device)
+
+Open Android Studio → Device Manager → **Create Virtual Device**:
+1. Pick any phone profile (e.g. Pixel 9 Pro XL)
+2. Download and select a system image (e.g. API 35)
+3. Name it `Pixel_9_Pro_XL` (or whatever you set in `.env`)
+4. Finish — don't need to start it
+
+Your AVD files will be at:
+- **Linux (standard):** `~/.android/avd/`
+- **Linux (Android Studio flatpak):** `~/.var/app/com.google.AndroidStudio/config/.android/avd/`
+- **macOS:** `~/.android/avd/`
+
+### Node.js 18+ and pnpm
+
+```bash
+# Install Node.js via nvm (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc   # or ~/.zshrc
+nvm install --lts
+
+# Enable pnpm via corepack
+corepack enable pnpm
+```
+
+### Python 3.11-3.13
+
+```bash
+# Fedora
+sudo dnf install -y python3.13 python3.13-venv
+
+# Ubuntu / Debian
+sudo apt install -y python3 python3-venv
+```
+
+### System packages
+
+```bash
+# Fedora
+sudo dnf install -y xorg-x11-server-Xvfb x11vnc novnc python3-websockify xdotool ffmpeg tmux
+
+# Ubuntu / Debian
+sudo apt install -y xvfb x11vnc novnc websockify xdotool ffmpeg tmux
+```
+
+### Anthropic API Key
+
+Get one at [console.anthropic.com](https://console.anthropic.com/). The agent uses Claude Sonnet for reasoning.
 
 ## Setup
 
@@ -31,11 +86,39 @@ cd ../..
 # Frontend
 cd frontend && pnpm install
 cd ..
-
-# Configure
-cp backend/.env.example backend/.env
-# Edit backend/.env — set ANTHROPIC_API_KEY and verify SDK paths
 ```
+
+### Configure `.env`
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` with your values:
+
+```env
+# Required — get from https://console.anthropic.com/
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+
+# Path to Android SDK — find with: echo $ANDROID_HOME or check ~/Android/Sdk
+ANDROID_SDK_ROOT=/home/you/Android/Sdk
+
+# Path to AVD directory — find with: ls ~/.android/avd/ or check Android Studio settings
+ANDROID_AVD_HOME=/home/you/.android/avd
+
+# Name of the base AVD to clone — must match exactly what you created in Android Studio
+BASE_AVD_NAME=Pixel_9_Pro_XL
+```
+
+**How to find your paths:**
+
+| Variable | How to find it |
+|----------|---------------|
+| `ANDROID_SDK_ROOT` | Run `echo $ANDROID_HOME` or `echo $ANDROID_SDK_ROOT`, or check `~/Android/Sdk` |
+| `ANDROID_AVD_HOME` | Run `ls ~/.android/avd/` — you should see `YourAVD.avd/` and `YourAVD.ini` |
+| `BASE_AVD_NAME` | The folder name without `.avd` — e.g. if you see `Pixel_9_Pro_XL.avd/`, use `Pixel_9_Pro_XL` |
+
+> **Flatpak Android Studio?** Your AVD path is likely `~/.var/app/com.google.AndroidStudio/config/.android/avd/`
 
 ## Run
 

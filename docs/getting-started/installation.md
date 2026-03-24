@@ -2,16 +2,113 @@
 
 ## Prerequisites
 
-| Requirement | Version |
-|-------------|---------|
-| Node.js | 18+ |
-| pnpm | 9+ |
-| Python | 3.11-3.13 |
-| Android SDK | With emulator |
-| ffmpeg | Any recent version |
-| tmux | Any recent version |
+| Requirement | Version | What it's for |
+|-------------|---------|---------------|
+| Android Studio | Latest | Provides SDK, emulator, and AVD manager |
+| Node.js | 18+ | Runs the NestJS backend |
+| pnpm | 9+ | Package manager for Node.js |
+| Python | 3.11-3.13 | Runs the DroidRun agent service |
+| ffmpeg | Any recent | Screen recording during agent tasks |
+| tmux | Any recent | Multi-pane dev environment via `start.sh` |
 
-### System Packages
+---
+
+### Install Android Studio + SDK
+
+Download from [developer.android.com/studio](https://developer.android.com/studio).
+
+During installation, make sure to include:
+- Android SDK
+- Android Emulator
+- Android SDK Platform-Tools
+
+After installation, verify:
+
+```bash
+# Check SDK exists (default location)
+ls ~/Android/Sdk/emulator/emulator
+
+# Check ADB is available
+adb --version
+```
+
+> [!NOTE]
+> The SDK is typically installed at `~/Android/Sdk` on Linux and `~/Library/Android/sdk` on macOS. If `adb` isn't in your PATH, add `~/Android/Sdk/platform-tools` to your PATH in `~/.bashrc` or `~/.zshrc`.
+
+### Create a Base AVD
+
+Open Android Studio → **Device Manager** → **Create Virtual Device**:
+
+1. Pick a phone profile (e.g. **Pixel 9 Pro XL**)
+2. Download and select a system image (e.g. **API 35**, **VanillaIceCream**)
+3. Name it `Pixel_9_Pro_XL` (this must match `BASE_AVD_NAME` in `.env`)
+4. Click **Finish** — you don't need to start it
+
+Your AVD files will be created at:
+
+| OS | Path |
+|----|------|
+| Linux (standard) | `~/.android/avd/` |
+| Linux (Android Studio Flatpak) | `~/.var/app/com.google.AndroidStudio/config/.android/avd/` |
+| macOS | `~/.android/avd/` |
+
+Verify:
+
+```bash
+ls ~/.android/avd/
+# Should show: Pixel_9_Pro_XL.avd/  Pixel_9_Pro_XL.ini
+```
+
+### Install Node.js + pnpm
+
+```bash
+# Install Node.js via nvm (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc   # or ~/.zshrc
+nvm install --lts
+
+# Enable pnpm via corepack
+corepack enable pnpm
+```
+
+Verify:
+
+```bash
+node --version   # v18+ or v20+
+pnpm --version   # 9+
+```
+
+### Install Python
+
+<!-- tabs:start -->
+
+#### **Fedora**
+
+```bash
+sudo dnf install -y python3.13 python3.13-venv
+```
+
+#### **Ubuntu / Debian**
+
+```bash
+sudo apt install -y python3 python3-venv
+```
+
+#### **macOS**
+
+```bash
+brew install python@3.13
+```
+
+<!-- tabs:end -->
+
+Verify:
+
+```bash
+python3 --version   # 3.11-3.13
+```
+
+### Install System Packages
 
 <!-- tabs:start -->
 
@@ -35,6 +132,12 @@ brew install ffmpeg xdotool tmux
 ```
 
 <!-- tabs:end -->
+
+### Get an Anthropic API Key
+
+Sign up at [console.anthropic.com](https://console.anthropic.com/) and create an API key. The agent uses **Claude Sonnet** for reasoning and vision.
+
+---
 
 ## Setup
 
@@ -78,20 +181,34 @@ cp backend/.env.example backend/.env
 Edit `backend/.env`:
 
 ```env
+# Required — your Anthropic API key from https://console.anthropic.com/
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+
+# Path to Android SDK
+# Find with: echo $ANDROID_HOME  or  echo $ANDROID_SDK_ROOT
 ANDROID_SDK_ROOT=/home/you/Android/Sdk
+
+# Path to AVD directory (where .avd folders live)
+# Find with: ls ~/.android/avd/
 ANDROID_AVD_HOME=/home/you/.android/avd
+
+# Name of the base AVD to clone for each phone
+# Must match the folder name without .avd extension
 BASE_AVD_NAME=Pixel_9_Pro_XL
 ```
 
-> [!NOTE]
-> The `BASE_AVD_NAME` must match an existing AVD created in Android Studio. This AVD is cloned for each virtual phone.
+**How to find your paths:**
 
-### 6. Create a base AVD
+| Variable | How to find it |
+|----------|---------------|
+| `ANDROID_SDK_ROOT` | `echo $ANDROID_HOME` or `echo $ANDROID_SDK_ROOT`, or check `~/Android/Sdk` |
+| `ANDROID_AVD_HOME` | `ls ~/.android/avd/` — you should see `YourAVD.avd/` and `YourAVD.ini` |
+| `BASE_AVD_NAME` | The folder name without `.avd` — e.g. `Pixel_9_Pro_XL.avd/` → `Pixel_9_Pro_XL` |
 
-Open Android Studio → Device Manager → Create Device. Choose any phone profile and a recent system image. Name it exactly as set in `BASE_AVD_NAME`.
+> [!WARNING]
+> **Flatpak Android Studio?** Your AVD path is likely `~/.var/app/com.google.AndroidStudio/config/.android/avd/` — not the standard `~/.android/avd/`.
 
-### 7. Start
+### 6. Start
 
 ```bash
 ./start.sh
