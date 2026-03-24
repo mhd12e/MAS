@@ -232,12 +232,33 @@
     section.cover {
       background: #111410 !important;
       color: #EDDFCC !important;
+      height: calc(100vh - 56px) !important;
+      min-height: 0 !important;
+      max-height: calc(100vh - 56px) !important;
+      overflow: hidden !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    section.cover .cover-main {
+      text-align: center !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    section.cover .mask {
+      background: #111410 !important;
+      opacity: 1 !important;
     }
     section.cover h1 {
       color: #EDDFCC !important;
       font-weight: 700 !important;
       font-size: 2.5rem !important;
       margin: 0.5rem 0 !important;
+    }
+    section.cover blockquote {
+      text-align: center !important;
     }
     section.cover blockquote p {
       color: #8BB888 !important;
@@ -248,7 +269,7 @@
       padding: 0 !important;
       max-width: 500px !important;
       margin: 1.5rem auto !important;
-      text-align: left !important;
+      text-align: center !important;
     }
     section.cover ul li {
       color: #c4b8a4 !important;
@@ -258,6 +279,9 @@
     section.cover ul li::before {
       content: "→ " !important;
       color: #8BB888 !important;
+    }
+    section.cover .cover-main > p:last-of-type {
+      text-align: center !important;
     }
     section.cover .cover-main > p:last-of-type a {
       border-radius: 9999px !important;
@@ -282,10 +306,6 @@
     section.cover .cover-main > p:last-of-type a:not(:first-child):hover {
       color: #EDDFCC !important;
       border-color: rgba(139, 184, 136, 0.5) !important;
-    }
-    /* Hide topbar on cover */
-    body.close .mas-topbar {
-      display: flex;
     }
   </style>
 </head>
