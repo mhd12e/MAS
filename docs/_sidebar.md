@@ -1,0 +1,21 @@
+- **Home**
+  - [Introduction](README.md)
+- **Getting Started**
+  - [Installation](getting-started/installation.md)
+  - [Quick Start](getting-started/quick-start.md)
+  - [Architecture](getting-started/architecture.md)
+  - [How It Works](getting-started/how-it-works.md)
+- **Authentication**
+  - [Overview](auth/overview.md)
+  - [JWT Tokens](auth/jwt.md)
+  - [API Keys](auth/api-keys.md)
+- **API Reference**
+  - [Phones](api/phones.md)
+  - [Agent](api/agent.md)
+  - [Tasks](api/tasks.md)
+  - [Recordings](api/recordings.md)
+  - [Auth Endpoints](api/auth.md)
+- **Guides**
+  - [Streaming vs Sync](guides/streaming-vs-sync.md)
+  - [Automation Scripts](guides/automation.md)
+  - [Error Handling](guides/errors.md)
