@@ -231,40 +231,15 @@
     /* ── Cover page styling ── */
     section.cover {
       background: #111410 !important;
-      color: #EDDFCC !important;
-      height: calc(100vh - 56px) !important;
-      min-height: 0 !important;
-      max-height: calc(100vh - 56px) !important;
-      overflow: hidden !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-    }
-    section.cover .cover-main {
-      text-align: center !important;
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
+      background-image: none !important;
     }
     section.cover .mask {
       background: #111410 !important;
       background-image: none !important;
       opacity: 1 !important;
     }
-    section.cover::before,
-    section.cover::after {
-      display: none !important;
-    }
     section.cover .cover-main {
-      z-index: 1 !important;
-    }
-    :root {
-      --cover-background-color: #111410 !important;
-      --cover-background-image: none !important;
-      --cover-background-mask-color: #111410 !important;
-      --cover-background-mask-opacity: 1 !important;
-      --cover-background-mask-visibility: visible !important;
+      text-align: center !important;
     }
     section.cover h1 {
       color: #EDDFCC !important;
@@ -294,9 +269,6 @@
     section.cover ul li::before {
       content: "→ " !important;
       color: #8BB888 !important;
-    }
-    section.cover .cover-main > p:last-of-type {
-      text-align: center !important;
     }
     section.cover .cover-main > p:last-of-type a {
       border-radius: 9999px !important;
