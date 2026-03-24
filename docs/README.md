@@ -18,7 +18,13 @@ graph LR
 
 ---
 
-## Base URL
+## Getting Started
+
+```bash
+./start.sh
+```
+
+This starts the backend, frontend, and docs in a single tmux session. Open `http://localhost:5173` to use the dashboard, or use the API directly:
 
 ```
 http://localhost:3000/api/v1

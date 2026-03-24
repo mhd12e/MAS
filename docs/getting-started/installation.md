@@ -9,6 +9,7 @@
 | Python | 3.11-3.13 |
 | Android SDK | With emulator |
 | ffmpeg | Any recent version |
+| tmux | Any recent version |
 
 ### System Packages
 
@@ -17,19 +18,19 @@
 #### **Fedora**
 
 ```bash
-sudo dnf install -y xorg-x11-server-Xvfb x11vnc novnc python3-websockify xdotool ffmpeg
+sudo dnf install -y xorg-x11-server-Xvfb x11vnc novnc python3-websockify xdotool ffmpeg tmux
 ```
 
 #### **Ubuntu / Debian**
 
 ```bash
-sudo apt install -y xvfb x11vnc novnc websockify xdotool ffmpeg
+sudo apt install -y xvfb x11vnc novnc websockify xdotool ffmpeg tmux
 ```
 
 #### **macOS**
 
 ```bash
-brew install ffmpeg xdotool
+brew install ffmpeg xdotool tmux
 # Xvfb and x11vnc are Linux-only — macOS requires alternative display capture
 ```
 
@@ -40,7 +41,7 @@ brew install ffmpeg xdotool
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url> agent-mobiles
+git clone https://github.com/mhd12e/MAS.git agent-mobiles
 cd agent-mobiles
 ```
 
@@ -96,7 +97,7 @@ Open Android Studio → Device Manager → Create Device. Choose any phone profi
 ./start.sh
 ```
 
-This opens a tmux session with three panes:
+This launches everything in a single tmux session with three panes:
 
 ```mermaid
 graph LR
@@ -117,11 +118,21 @@ graph LR
     style DOCS fill:#553c9a,stroke:#9f7aea,color:#fff
 ```
 
-| Pane | Service | Port |
-|------|---------|------|
-| Left | Backend (NestJS + FastAPI) | `:3000` + `:8001` |
-| Top-right | Frontend (Vite) | `:5173` |
-| Bottom-right | Docs (Docsify) | `:3001` |
+| Pane | Service | URL |
+|------|---------|-----|
+| Left | Backend (NestJS + FastAPI) | `http://localhost:3000` |
+| Top-right | Frontend (Vite) | `http://localhost:5173` |
+| Bottom-right | Docs (Docsify) | `http://localhost:3001` |
 
 > [!TIP]
-> Switch between tmux panes with `Ctrl+B` then arrow keys. Zoom a pane with `Ctrl+B` then `Z`.
+> Switch between tmux panes with `Ctrl+B` then arrow keys. Zoom a pane with `Ctrl+B` then `Z`. Closing any pane kills the entire session and cleans up all ports.
+
+### What `start.sh` does
+
+1. Kills any leftover processes on ports 3000, 3001, 5173, 8001
+2. Creates a tmux session with labeled panes
+3. Starts the backend (`pnpm start:dev`), frontend (`pnpm dev`), and docs (`python3 -m http.server 3001`)
+4. Sets up a cleanup hook — closing any pane kills everything
+
+> [!NOTE]
+> You don't need to start services manually. `./start.sh` handles everything. Just make sure tmux is installed.

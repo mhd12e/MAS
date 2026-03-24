@@ -2,6 +2,9 @@
 
 Create your first phone and run an AI task.
 
+> [!NOTE]
+> Make sure you've run `./start.sh` first. See [Installation](getting-started/installation.md) for setup.
+
 ---
 
 ## Using the Dashboard
