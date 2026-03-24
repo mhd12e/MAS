@@ -29,8 +29,12 @@
   <script>
     window.$docsify = {
       name: 'Mobile Agent Studio',
-      repo: '',
+      repo: 'https://github.com/mhd12e/MAS',
+      basePath: window.location.pathname.includes('/MAS/') ? '/MAS/' : '/',
       loadSidebar: true,
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md',
+      },
       subMaxLevel: 3,
       auto2top: true,
       search: {
