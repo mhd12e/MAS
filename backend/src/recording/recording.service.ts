@@ -114,48 +114,58 @@ export class RecordingService implements OnModuleInit {
     return recordingId;
   }
 
-  /** Stop recording a phone */
-  stopRecording(phoneId: string): void {
-    const active = this.activeRecordings.get(phoneId);
-    if (!active) return;
-
-    const { proc, startTime, recordingId } = active;
-    const durationSecs = Math.round((Date.now() - startTime) / 1000);
-
-    // Send 'q' to ffmpeg stdin for graceful shutdown (finalizes mp4)
-    try {
-      proc.stdin?.write('q');
-    } catch {}
-
-    // Fallback: SIGINT after 3s if still alive
-    setTimeout(() => {
-      if (!proc.killed) {
-        try { proc.kill('SIGINT'); } catch {}
-      }
-    }, 3000);
-
-    // Update DB
-    this.db.updateRecording(recordingId, { status: 'done', durationSecs });
-    this.activeRecordings.delete(phoneId);
-    this.logger.log(`Stopped recording ${recordingId} (${durationSecs}s)`);
+  /** Stop recording a phone — waits for ffmpeg to finalize the MP4 */
+  async stopRecording(phoneId: string): Promise<void> {
+    await this.stopRecordingInternal(phoneId, 'done');
   }
 
-  /** Stop with error status */
-  stopRecordingWithError(phoneId: string): void {
+  /** Stop with error status — still waits for ffmpeg to finalize */
+  async stopRecordingWithError(phoneId: string): Promise<void> {
+    await this.stopRecordingInternal(phoneId, 'done');
+  }
+
+  /** Internal: gracefully stop ffmpeg and wait for it to exit */
+  private async stopRecordingInternal(phoneId: string, status: 'done' | 'error'): Promise<void> {
     const active = this.activeRecordings.get(phoneId);
     if (!active) return;
 
     const { proc, startTime, recordingId } = active;
     const durationSecs = Math.round((Date.now() - startTime) / 1000);
-
-    try { proc.stdin?.write('q'); } catch {}
-    setTimeout(() => {
-      if (!proc.killed) try { proc.kill('SIGINT'); } catch {}
-    }, 3000);
-
-    this.db.updateRecording(recordingId, { status: 'done', durationSecs });
     this.activeRecordings.delete(phoneId);
-    this.logger.log(`Stopped recording ${recordingId} on error (${durationSecs}s)`);
+
+    // Wait for ffmpeg to exit after sending quit command
+    await new Promise<void>((resolve) => {
+      let resolved = false;
+      const done = () => { if (!resolved) { resolved = true; resolve(); } };
+
+      // Listen for exit before sending quit
+      proc.on('exit', done);
+      proc.on('error', done);
+
+      // Send 'q' to ffmpeg stdin for graceful shutdown (finalizes mp4 moov atom)
+      try {
+        proc.stdin?.write('q');
+        proc.stdin?.end();
+      } catch {}
+
+      // Fallback: SIGINT after 5s if still alive
+      setTimeout(() => {
+        if (!proc.killed) {
+          try { proc.kill('SIGINT'); } catch {}
+        }
+      }, 5000);
+
+      // Hard kill + resolve after 10s no matter what
+      setTimeout(() => {
+        if (!proc.killed) {
+          try { proc.kill('SIGKILL'); } catch {}
+        }
+        done();
+      }, 10000);
+    });
+
+    this.db.updateRecording(recordingId, { status, durationSecs });
+    this.logger.log(`Stopped recording ${recordingId} (${durationSecs}s, ${status})`);
   }
 
   /** Delete a recording file from disk */

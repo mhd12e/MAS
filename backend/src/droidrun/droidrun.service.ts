@@ -91,10 +91,10 @@ export class DroidrunService {
           }
         });
 
-        fastapiRes.on('end', () => {
+        fastapiRes.on('end', async () => {
           run.done = true;
-          // Stop recording
-          this.recordingService.stopRecording(phoneId);
+          // Stop recording — wait for ffmpeg to finalize the MP4
+          await this.recordingService.stopRecording(phoneId);
 
           for (const client of run.clients) {
             try { client.end(); } catch {}
@@ -107,11 +107,11 @@ export class DroidrunService {
           }, 60_000);
         });
 
-        fastapiRes.on('error', () => {
+        fastapiRes.on('error', async () => {
           const errEvent = `data: ${JSON.stringify({ type: 'error', message: 'Lost connection to agent.' })}\n\n`;
           run.events.push(errEvent);
           run.done = true;
-          this.recordingService.stopRecordingWithError(phoneId);
+          await this.recordingService.stopRecordingWithError(phoneId);
           for (const client of run.clients) {
             try { client.write(errEvent); client.end(); } catch {}
           }
