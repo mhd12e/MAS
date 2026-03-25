@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
@@ -288,8 +289,33 @@ async def run_task_stream(task: str, device_serial: str) -> AsyncGenerator[str, 
             async def _run():
                 return await agent.run()
 
-            result = loop.run_until_complete(_run())
-            result_q.put({"result": result})
+            # Retry on transient API errors (overloaded, rate limited, etc.)
+            max_retries = 3
+            last_err = None
+            for attempt in range(max_retries):
+                try:
+                    result = loop.run_until_complete(_run())
+                    result_q.put({"result": result})
+                    last_err = None
+                    break
+                except Exception as e:
+                    err_str = str(e)
+                    is_transient = any(k in err_str.lower() for k in ["overloaded", "rate_limit", "529", "503"])
+                    if is_transient and attempt < max_retries - 1:
+                        wait = (attempt + 1) * 10
+                        log_q.put(f"__status__:API overloaded, retrying in {wait}s (attempt {attempt + 2}/{max_retries})...")
+                        print(f"[AGENT] Transient error, retrying in {wait}s: {e}", flush=True)
+                        time.sleep(wait)
+                        # Recreate agent for fresh state
+                        agent = DroidAgent(goal=task, config=config, llms=llm)
+                        loop = asyncio.new_event_loop()
+                        last_err = e
+                    else:
+                        last_err = e
+                        break
+
+            if last_err is not None:
+                raise last_err
 
         except Exception as e:
             print(f"[AGENT ERROR] {e}", flush=True)

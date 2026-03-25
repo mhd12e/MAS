@@ -275,9 +275,8 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
     this.spawnManaged(instance, 'emulator', this.emulatorBin(), emulatorArgs, emulatorEnv, logDir);
     await this.sleep(8000);
 
-    // 3. Arrange windows
-    this.arrangeEmulatorWindow(displayNum, id, instance.adbPort);
-    await this.sleep(2000);
+    // 3. Arrange windows (retries until window appears)
+    await this.arrangeEmulatorWindow(displayNum, id, instance.adbPort);
 
     // 4. x11vnc — kill any leftover process on the VNC port first
     try { execFileSync('fuser', ['-k', `${instance.vncPort}/tcp`], { stdio: 'pipe', timeout: 3000 }); } catch {}
@@ -428,7 +427,7 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
 
   // ── Private: Window Management ────────────────────────────────────────────
 
-  private arrangeEmulatorWindow(displayNum: number, id: string, adbPort: number) {
+  private async arrangeEmulatorWindow(displayNum: number, id: string, adbPort: number) {
     const env: Record<string, string> = {
       ...process.env as any,
       DISPLAY: `:${displayNum}`,
@@ -438,29 +437,36 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
     delete env.XAUTHORITY;
 
     const opts = { timeout: 5000, stdio: 'pipe' as const, env };
+    const title = `Android Emulator - ${id}:${adbPort}`;
 
-    try {
-      const title = `Android Emulator - ${id}:${adbPort}`;
-      const wids = execFileSync('xdotool', ['search', '--name', title], opts)
-        .toString().trim().split('\n').filter(Boolean);
+    // Retry up to 5 times — emulator window may take time to appear
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const wids = execFileSync('xdotool', ['search', '--name', title], opts)
+          .toString().trim().split('\n').filter(Boolean);
 
-      if (wids.length > 0) {
-        const wid = wids[0];
-        execFileSync('xdotool', ['windowmove', wid, '0', '0'], opts);
-        execFileSync('xdotool', ['windowsize', wid, '320', '650'], opts);
-        execFileSync('xdotool', ['windowraise', wid], opts);
-        this.logger.log(`${id}: positioned phone window (${wid})`);
-      }
+        if (wids.length > 0) {
+          const wid = wids[0];
+          execFileSync('xdotool', ['windowmove', wid, '0', '0'], opts);
+          execFileSync('xdotool', ['windowsize', wid, '320', '650'], opts);
+          execFileSync('xdotool', ['windowraise', wid], opts);
+          this.logger.log(`${id}: positioned phone window (${wid})`);
 
-      const extWids = execFileSync('xdotool', ['search', '--name', 'Extended Controls'], opts)
-        .toString().trim().split('\n').filter(Boolean);
-      for (const wid of extWids) {
-        execFileSync('xdotool', ['windowminimize', wid], opts);
-      }
-      if (extWids.length) this.logger.log(`${id}: minimized Extended Controls`);
-    } catch (err) {
-      this.logger.warn(`${id}: window arrangement failed:`, (err as any).message);
+          // Also minimize Extended Controls if it appeared
+          try {
+            const extWids = execFileSync('xdotool', ['search', '--name', 'Extended Controls'], opts)
+              .toString().trim().split('\n').filter(Boolean);
+            for (const wid of extWids) {
+              execFileSync('xdotool', ['windowminimize', wid], opts);
+            }
+          } catch { /* Extended Controls may not appear — that's fine */ }
+          return; // success
+        }
+      } catch { /* window not found yet */ }
+
+      await this.sleep(3000);
     }
+    this.logger.warn(`${id}: window arrangement skipped — emulator window not found after retries`);
   }
 
   // ── Private: Cleanup ──────────────────────────────────────────────────────
