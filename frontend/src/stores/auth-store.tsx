@@ -24,12 +24,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [needsRegistration, setNeedsRegistration] = useState<boolean | null>(null);
 
-  // Check auth status on mount
+  // Check auth status + validate saved token on mount
   useEffect(() => {
+    const savedToken = localStorage.getItem('auth_token');
+
     fetch(`${API_BASE}/auth/status`)
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         setNeedsRegistration(!data.hasAccount);
+
+        // If we have a saved token, validate it with a test request
+        if (savedToken) {
+          try {
+            const res = await fetch(`${API_BASE}/phones`, {
+              headers: { Authorization: `Bearer ${savedToken}` },
+            });
+            if (res.status === 401) {
+              // Token is invalid/expired — clear it
+              localStorage.removeItem('auth_token');
+              setToken(null);
+            }
+          } catch {
+            // Backend might be down — keep token, let dashboard show offline
+          }
+        }
+
         setLoading(false);
       })
       .catch(() => setLoading(false));

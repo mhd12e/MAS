@@ -1,7 +1,18 @@
 import { API_BASE } from '@/config';
 
-/** Fetch wrapper that adds JWT auth header */
-export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+/** Clear auth and redirect to login */
+function forceLogout() {
+  localStorage.removeItem('auth_token');
+  // Only reload if not already on root (avoids infinite loop)
+  if (window.location.pathname !== '/') {
+    window.location.href = '/';
+  } else {
+    window.location.reload();
+  }
+}
+
+/** Fetch wrapper that adds JWT auth header and handles 401 */
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = localStorage.getItem('auth_token');
   const headers = new Headers(init?.headers);
 
@@ -12,7 +23,14 @@ export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     headers.set('Content-Type', 'application/json');
   }
 
-  return fetch(`${API_BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+
+  // If the token is rejected, clear it and redirect to login
+  if (res.status === 401 && token) {
+    forceLogout();
+  }
+
+  return res;
 }
 
 /** Shorthand for GET */
