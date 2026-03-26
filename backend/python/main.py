@@ -37,21 +37,79 @@ def make_event(event_type: str, message: str) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
+def _extract_api_error_message(raw: str) -> str | None:
+    """Try to extract a human-readable message from API error JSON blobs."""
+    # Look for 'message': '...' pattern via regex — no eval needed
+    import re
+    # Match 'message': 'some text' or "message": "some text"
+    m = re.search(r"""['"]message['"]\s*:\s*['"]([^'"]+)['"]""", raw)
+    if m:
+        return m.group(1)
+    return None
+
+
 def friendly_error(e: Exception | str) -> str:
-    msg = str(e).lower()
-    if "device not found" in msg or "no devices" in msg:
-        return "Could not connect to the phone. It may still be booting."
-    if "401" in msg or "api key" in msg or "authentication" in msg or "unauthorized" in msg or "api_key" in msg:
-        return "AI service authentication failed. Check your Anthropic API key in backend/.env"
+    """Convert raw errors (including API JSON blobs) into clean, user-friendly messages."""
+    raw = str(e)
+
+    # Try to extract the actual message from JSON error blobs
+    extracted = _extract_api_error_message(raw)
+    msg = (extracted or raw).lower()
+
+    # ── Overloaded ──
+    if "overloaded" in msg:
+        return "The AI service is currently overloaded. Please wait a moment and try again."
+
+    # ── Credit / billing ──
+    if "credit balance" in msg or "billing" in msg or "insufficient" in msg:
+        return "Your Anthropic API credit balance is too low. Add credits at console.anthropic.com."
+
+    # ── Auth / API key ──
+    if any(k in msg for k in ["401", "api key", "authentication", "unauthorized", "api_key", "invalid x-api-key", "invalid_api_key"]):
+        return "AI service authentication failed. Check your ANTHROPIC_API_KEY in backend/.env."
+    if "not provided" in msg and "api" in msg:
+        return "AI service authentication failed. Check your ANTHROPIC_API_KEY in backend/.env."
+    if "permission" in msg and "denied" in msg:
+        return "Your API key doesn't have permission for this model. Check your Anthropic plan."
+
+    # ── Rate limit ──
+    if "rate limit" in msg or "rate_limit" in msg or "429" in msg or "too many requests" in msg:
+        return "AI rate limit reached. Wait a moment and try again."
+
+    # ── Model not found ──
+    if "model" in msg and ("not found" in msg or "does not exist" in msg or "not_found" in msg):
+        return "The AI model is not available. Check the model name in the configuration."
+
+    # ── Request too large ──
+    if "too large" in msg or "request_too_large" in msg:
+        return "The request was too large for the AI model. Try a simpler instruction."
+
+    # ── Connection / network ──
+    if "connection" in msg and ("refused" in msg or "reset" in msg or "error" in msg):
+        return "Could not reach the AI service. Check your internet connection."
     if "timeout" in msg:
         return "The task timed out. Try a simpler instruction."
-    if "rate limit" in msg or "429" in msg:
-        return "AI rate limit reached. Wait a moment and try again."
+    if "dns" in msg or "resolve" in msg:
+        return "Could not reach the AI service. Check your internet connection."
+
+    # ── Phone / device ──
+    if "device not found" in msg or "no devices" in msg:
+        return "Could not connect to the phone. It may still be booting."
     if "can't verify" in msg or "ui state" in msg:
         return "The agent couldn't verify its actions. Try again — the phone may have been slow to respond."
-    if "not provided" in msg and "api" in msg:
-        return "AI service authentication failed. Check your Anthropic API key in backend/.env"
-    return "Something went wrong while running the task."
+
+    # ── Server errors ──
+    if "500" in msg or "internal server error" in msg or "internal_server_error" in msg:
+        return "The AI service encountered an internal error. Try again in a moment."
+    if "502" in msg or "bad gateway" in msg:
+        return "The AI service is temporarily unavailable. Try again in a moment."
+    if "503" in msg or "service unavailable" in msg:
+        return "The AI service is temporarily unavailable. Try again in a moment."
+    if "529" in msg:
+        return "The AI service is overloaded. Try again in a moment."
+
+    # ── Fallback ──
+    return "Something went wrong while running the task. Please try again."
 
 
 def is_infrastructure_error(msg: str) -> bool:
@@ -61,6 +119,8 @@ def is_infrastructure_error(msg: str) -> bool:
         "401", "403", "api key", "authentication", "unauthorized",
         "rate limit", "429", "timeout", "connection refused",
         "device not found", "no devices", "import", "module",
+        "overloaded", "credit balance", "billing", "529", "503", "502",
+        "service unavailable", "bad gateway", "internal server error",
     ])
 
 
