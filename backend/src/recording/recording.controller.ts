@@ -4,6 +4,7 @@ import { join } from 'path';
 import { existsSync, createReadStream, statSync } from 'fs';
 import { DbService } from '../db/db.service';
 import { RecordingService } from './recording.service';
+import { Public } from '../auth/auth.guard';
 
 /** Recording with resolved names (looked up from phones/tasks, not stored) */
 interface RecordingView {
@@ -35,6 +36,7 @@ export class RecordingController {
     return this.resolveAll(this.db.getRecordingsForPhone(phoneId).filter((r) => r.status === 'done'));
   }
 
+  @Public()
   @Get(':id/video')
   streamVideo(@Param('id') id: string, @Res() res: Response) {
     const rec = this.db.getRecording(id);
