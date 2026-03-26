@@ -262,17 +262,20 @@ sequenceDiagram
 
     NestJS->>NestJS: Agent task starts
     NestJS->>DB: Create recording entry (status: "recording")
-    NestJS->>FFMPEG: spawn ffmpeg -f x11grab<br/>-video_size 1080x2424<br/>-i :N -c:v libx264<br/>data/recordings/rec-X.mp4
+    NestJS->>FFMPEG: spawn ffmpeg -f x11grab<br/>-video_size 320x650 -framerate 15<br/>-movflags frag_keyframe+empty_moov<br/>-i :N -c:v libx264
     FFMPEG->>XVFB: Capture display pixels
 
-    Note over FFMPEG: Recording in progress...<br/>Capturing at display framerate
+    Note over FFMPEG: Recording in progress...<br/>Fragmented MP4 — playable even if interrupted
 
     NestJS->>NestJS: Agent task completes
-    NestJS->>FFMPEG: SIGINT (graceful stop)
-    FFMPEG->>FFMPEG: Finalize MP4 container
+    NestJS->>FFMPEG: Send 'q' to stdin (graceful stop)
+    NestJS->>NestJS: Wait for ffmpeg exit (up to 10s)
     FFMPEG-->>NestJS: Process exits
     NestJS->>DB: Update recording (status: "done", durationSecs)
 ```
+
+> [!NOTE]
+> Recordings use **fragmented MP4** (`frag_keyframe+empty_moov`) instead of standard MP4. This writes the moov atom at the start of the file, so the video is playable even if ffmpeg is killed abruptly (e.g. on task error or backend crash). Standard MP4 writes the moov atom on exit — if interrupted, the file is corrupt and unplayable.
 
 ### Recording lifecycle
 
@@ -399,7 +402,7 @@ graph TD
     SPAWN --> RUNNING{Process running?}
     RUNNING -->|yes| RUNNING
     RUNNING -->|exit/crash| CHECK{Restart count < 3?}
-    CHECK -->|yes| WAIT[Wait 1s] --> SPAWN
+    CHECK -->|yes| WAIT[Wait 2s] --> SPAWN
     CHECK -->|no| ERROR[Mark phone as 'error']
 
     style SUPERVISOR fill:#8BB888,stroke:#6a9966,color:#111
@@ -454,13 +457,23 @@ sequenceDiagram
     PY-->>NEST: { status: "ok" }
 
     NEST->>EMU: onModuleInit()
-    EMU->>EMU: Clean stale X11 sockets (:11-:20)
-    EMU->>EMU: Clean orphaned AVDs not in db.json
+    EMU->>EMU: Kill orphaned processes (Xvfb, x11vnc, websockify, emulator, ffmpeg)
+    EMU->>EMU: Clean stale X11 sockets (:11-:16)
+    EMU->>EMU: Delete orphaned AVDs not in db.json
+    EMU->>EMU: Free stale VNC/noVNC ports
+    EMU->>EMU: Set nextId from existing phone IDs
+    EMU->>EMU: Clean orphaned log directories
+    Note over EMU: Registered phones preserved in database
 
     NEST->>REC: onModuleInit()
-    REC->>REC: Clean orphaned recordings not matching any phone
+    REC->>REC: Clean orphaned recordings (phone gone)
+    REC->>REC: Clean orphaned video files (no DB entry)
+    REC->>REC: Mark interrupted recordings as error
 
     Note over NEST: Backend ready on :3000
     TMUX->>TMUX: Start frontend on :5173
     TMUX->>TMUX: Start docs on :3001
 ```
+
+> [!NOTE]
+> Startup cleanup **never deletes registered phones** from the database. Phone entries, tasks, and recordings are preserved across restarts. Only orphaned resources (AVD files with no DB entry, stale processes, leftover sockets) are cleaned up.

@@ -37,12 +37,23 @@ graph TD
 
 ## Agent Errors
 
-Errors during agent execution appear differently depending on the endpoint:
+All agent errors are automatically transformed into **clean, human-readable messages**. Raw API errors (JSON blobs, stack traces, HTTP status codes) are never shown to the user.
+
+| Raw API error | What the user sees |
+|--------------|-------------------|
+| `{'type': 'overloaded_error', 'message': 'Overloaded'}` | "The AI service is currently overloaded. Please wait a moment and try again." |
+| `{'type': 'invalid_request_error', 'message': 'Your credit balance is too low...'}` | "Your Anthropic API credit balance is too low. Add credits at console.anthropic.com." |
+| `Error code: 429 - rate_limit_error` | "AI rate limit reached. Wait a moment and try again." |
+| `Error code: 401 - unauthorized` | "AI service authentication failed. Check your ANTHROPIC_API_KEY in backend/.env." |
+| Connection refused / DNS error | "Could not reach the AI service. Check your internet connection." |
+| Device not found | "Could not connect to the phone. It may still be booting." |
+
+Errors appear differently depending on the endpoint:
 
 **Streaming (`/agent/run`)** — SSE event with `type: "error"`:
 
 ```
-data: {"type": "error", "message": "Could not connect to the phone."}
+data: {"type": "error", "message": "The AI service is currently overloaded. Please wait a moment and try again."}
 ```
 
 **Synchronous (`/agent/run-sync`)** — JSON with `success: false`:
@@ -57,8 +68,12 @@ data: {"type": "error", "message": "Could not connect to the phone."}
 |-------|-------|-----|
 | Could not connect to the phone | Phone not booted | Wait for `status: "ready"` |
 | AI service authentication failed | Invalid Anthropic API key | Check `ANTHROPIC_API_KEY` in `.env` |
-| AI rate limit reached | Too many API calls | Wait and retry |
+| AI service is currently overloaded | Anthropic servers at capacity | Auto-retried 3 times. Wait and try again. |
+| API credit balance is too low | Anthropic account out of credits | Add credits at console.anthropic.com |
+| AI rate limit reached | Too many API calls | Auto-retried. Wait and try again. |
+| Could not reach the AI service | Network/DNS issue | Check internet connection |
 | The task timed out | Exceeded 50 steps | Simplify the instruction |
+| API key doesn't have permission | Wrong Anthropic plan | Check your Anthropic plan |
 
 ---
 
@@ -257,14 +272,19 @@ curl -X DELETE http://localhost:3000/api/v1/phones/$PHONE \
 graph TD
     RUN["Run task"] --> CHECK{"Success?"}
     CHECK -->|"yes"| DONE["Return result"]
-    CHECK -->|"no"| ATTEMPT{"Attempt < max?"}
-    ATTEMPT -->|"yes"| WAIT["Wait (exponential backoff)<br/>5s, 10s, 15s..."]
+    CHECK -->|"no"| TRANSIENT{"Transient error?<br/>overloaded / rate limit / 503 / 529"}
+    TRANSIENT -->|"no"| FAIL["Return error immediately"]
+    TRANSIENT -->|"yes"| ATTEMPT{"Attempt < 3?"}
+    ATTEMPT -->|"yes"| WAIT["Wait 10s / 20s / 30s"]
     WAIT --> RUN
-    ATTEMPT -->|"no"| FAIL["Return last error"]
+    ATTEMPT -->|"no"| FAIL
 
     style DONE fill:#276749,stroke:#68d391,color:#fff
     style FAIL fill:#9b2c2c,stroke:#fc8181,color:#fff
 ```
+
+> [!NOTE]
+> Only **transient errors** (overloaded, rate limited, 503, 529) are retried. Permanent errors like invalid API key, insufficient credits, or bad requests fail immediately without retry.
 
 ## Retry pattern
 

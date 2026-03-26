@@ -407,7 +407,9 @@ graph TD
 
 - **One agent per phone** — cannot run two tasks simultaneously
 - **View-only mode** — phone screen locks while agent works
-- **Screen recording** — auto-starts on task begin, stops on finish
+- **Screen recording** — auto-starts on task begin, stops on finish. Uses fragmented MP4 so recordings are playable even if the task fails.
 - **Retries** — agent retries failed actions up to 3 times
 - **50 steps max** — prevents infinite loops
 - **Sync timeout** — `run-sync` times out after 10 minutes
+- **No Google accounts** — the agent will never log into Google Play, Gmail, YouTube, or any Google service. If a task requires a Google account, the agent stops and reports it. Non-Google accounts can be created if needed.
+- **API error retry** — transient API errors (overloaded, rate limited) are automatically retried up to 3 times with 10s/20s/30s backoff

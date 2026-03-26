@@ -28,16 +28,19 @@ sequenceDiagram
     participant FF as ffmpeg
     participant X as Xvfb Display
 
-    N->>FF: spawn ffmpeg -f x11grab -i :N
+    N->>FF: spawn ffmpeg -f x11grab -i :N<br/>320x650 @ 15fps, fragmented MP4
     FF->>X: Capture display pixels
 
-    Note over FF: Recording active...
+    Note over FF: Recording active...<br/>Playable even if interrupted
 
-    N->>FF: SIGINT (task done)
-    FF->>FF: Finalize MP4 container
+    N->>FF: Send 'q' to stdin (graceful stop)
+    N->>N: Wait for ffmpeg exit (up to 10s)
     FF-->>N: Exit
     N->>N: Calculate duration, save to db
 ```
+
+> [!NOTE]
+> Recordings use **fragmented MP4** (`frag_keyframe+empty_moov`). This ensures videos are playable even if the agent task fails or the backend crashes mid-recording. Resolution is 320x650 at 15fps.
 
 ---
 
@@ -207,3 +210,5 @@ Recordings are deleted when:
 - Their **task** is deleted
 - Their **phone** is deleted
 - **On startup** — orphaned recordings with no matching phone are cleaned up
+- **On startup** — orphaned video files with no DB entry are removed
+- **On startup** — recordings with status `recording` (interrupted by restart) are marked as `error`
