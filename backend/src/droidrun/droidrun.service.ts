@@ -250,6 +250,12 @@ export class DroidrunService {
       '- If an app is not open, open it first.',
       '- If you encounter a login screen, stop and report it.',
       '- Keep your prompts short. Do ONE action per step, then wait and verify.',
+      '',
+      'RULE 7 — ACCOUNTS:',
+      '- NEVER log into or use a Google account. Do not sign into Google Play, Gmail, YouTube, or any Google service.',
+      '- If a task requires a Google account, STOP and report that you cannot do it because Google accounts are not allowed.',
+      '- You MAY create new accounts on non-Google services if the task requires it.',
+      '- If an app prompts you to sign in with Google, skip it or dismiss the dialog.',
     ].join('\n');
   }
 }
