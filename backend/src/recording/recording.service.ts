@@ -10,7 +10,7 @@ const RECORDINGS_DIR = join(process.cwd(), '..', 'data', 'recordings');
 @Injectable()
 export class RecordingService implements OnModuleInit {
   private readonly logger = new Logger(RecordingService.name);
-  private readonly activeRecordings = new Map<string, { proc: ChildProcess; startTime: number; recordingId: string }>();
+  private readonly activeRecordings = new Map<string, { proc: ChildProcess; startTime: number; recordingId: string; exited: boolean }>();
 
   constructor(private db: DbService) {
     mkdirSync(RECORDINGS_DIR, { recursive: true });
@@ -83,6 +83,7 @@ export class RecordingService implements OnModuleInit {
     env.DISPLAY = `:${displayNum}`;
 
     // Start ffmpeg x11grab — capture the Xvfb display
+    // Use fragmented MP4 so the file is playable even if ffmpeg is killed abruptly
     const proc = spawn('ffmpeg', [
       '-f', 'x11grab',
       '-video_size', '320x650',
@@ -92,23 +93,23 @@ export class RecordingService implements OnModuleInit {
       '-preset', 'ultrafast',
       '-crf', '28',
       '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
+      '-movflags', 'frag_keyframe+empty_moov',
       '-y',
       filepath,
     ], {
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
-      detached: true,
     });
 
-    proc.unref();
     proc.stderr?.on('data', () => {}); // drain stderr to prevent buffer overflow
 
+    const entry = { proc, startTime: Date.now(), recordingId, exited: false };
     proc.on('exit', (code) => {
+      entry.exited = true;
       this.logger.log(`Recording ${recordingId} ffmpeg exited with code ${code}`);
     });
 
-    this.activeRecordings.set(phoneId, { proc, startTime: Date.now(), recordingId });
+    this.activeRecordings.set(phoneId, entry);
     this.logger.log(`Started recording ${recordingId} for ${phoneId} on :${displayNum}`);
 
     return recordingId;
@@ -129,20 +130,26 @@ export class RecordingService implements OnModuleInit {
     const active = this.activeRecordings.get(phoneId);
     if (!active) return;
 
-    const { proc, startTime, recordingId } = active;
+    const { proc, startTime, recordingId, exited } = active;
     const durationSecs = Math.round((Date.now() - startTime) / 1000);
     this.activeRecordings.delete(phoneId);
+
+    // If ffmpeg already exited, just update DB
+    if (exited) {
+      this.db.updateRecording(recordingId, { status, durationSecs });
+      this.logger.log(`Recording ${recordingId} already exited (${durationSecs}s, ${status})`);
+      return;
+    }
 
     // Wait for ffmpeg to exit after sending quit command
     await new Promise<void>((resolve) => {
       let resolved = false;
       const done = () => { if (!resolved) { resolved = true; resolve(); } };
 
-      // Listen for exit before sending quit
       proc.on('exit', done);
       proc.on('error', done);
 
-      // Send 'q' to ffmpeg stdin for graceful shutdown (finalizes mp4 moov atom)
+      // Send 'q' to ffmpeg stdin for graceful shutdown
       try {
         proc.stdin?.write('q');
         proc.stdin?.end();
