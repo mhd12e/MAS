@@ -472,10 +472,24 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
   // ── Private: Cleanup ──────────────────────────────────────────────────────
 
   private cleanupStaleResources() {
-    // Get the set of phone IDs registered in db.json
     const registeredIds = new Set(this.db.getPhones().map((p) => p.id));
 
-    // Scan AVD directory for phone-N entries
+    // 1. Kill orphaned processes from previous runs (before touching sockets/files)
+    this.logger.log('Cleaning up orphaned processes...');
+    for (const pattern of ['Xvfb :1[1-9]', 'x11vnc.*590[1-9]', 'websockify.*608[1-9]']) {
+      try { execFileSync('pkill', ['-f', pattern], { stdio: 'pipe', timeout: 3000 }); } catch {}
+    }
+    // Also kill orphaned emulator processes
+    try { execFileSync('pkill', ['-f', 'qemu-system.*phone-'], { stdio: 'pipe', timeout: 3000 }); } catch {}
+    // Kill orphaned ffmpeg x11grab
+    try { execFileSync('pkill', ['-f', 'ffmpeg.*x11grab'], { stdio: 'pipe', timeout: 3000 }); } catch {}
+
+    // 2. Remove stale X11 sockets in our display range
+    for (let d = DISPLAY_BASE; d <= DISPLAY_MAX; d++) {
+      this.cleanupDisplay(d);
+    }
+
+    // 3. Clean orphaned AVD files — only those NOT registered in db.json
     try {
       const files = readdirSync(this.avdHome);
       for (const f of files) {
@@ -483,33 +497,48 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
         if (!match) continue;
         const phoneId = match[1];
 
-        // Skip AVDs that are registered in the DB
-        if (registeredIds.has(phoneId)) continue;
+        if (registeredIds.has(phoneId)) continue; // keep registered phones' AVDs
 
-        // This AVD is orphaned — delete it
         rmSync(join(this.avdHome, f), { recursive: true, force: true });
         this.logger.log(`Cleaned up orphaned AVD: ${f}`);
       }
     } catch {}
 
-    // Clean up DB entries for phones whose AVD files no longer exist
-    for (const phone of this.db.getPhones()) {
-      const avdDir = join(this.avdHome, `${phone.id}.avd`);
-      if (!existsSync(avdDir)) {
-        this.logger.log(`Removing DB entry for missing AVD: ${phone.id}`);
-        this.db.removePhone(phone.id); // also removes associated tasks
+    // 4. Free ports that may be held by killed processes
+    for (let slot = 0; slot < MAX_EMULATORS; slot++) {
+      const ports = [
+        VNC_PORT_BASE + slot,
+        NOVNC_PORT_BASE + slot,
+      ];
+      for (const port of ports) {
+        try { execFileSync('fuser', ['-k', `${port}/tcp`], { stdio: 'pipe', timeout: 3000 }); } catch {}
       }
     }
 
-    // Remove stale X11 sockets in our display range
-    for (let d = DISPLAY_BASE; d <= DISPLAY_MAX; d++) {
-      this.cleanupDisplay(d);
+    // 5. Set nextId based on existing phones so new phones don't collide
+    const existingIds = this.db.getPhones().map((p) => {
+      const m = p.id.match(/^phone-(\d+)$/);
+      return m ? parseInt(m[1], 10) : 0;
+    });
+    if (existingIds.length > 0) {
+      this.nextId = Math.max(...existingIds) + 1;
     }
 
-    // Kill orphaned processes from previous runs
-    for (const pattern of ['Xvfb :1[1-9]', 'x11vnc.*590[1-9]', 'websockify.*608[1-9]']) {
-      try { execFileSync('pkill', ['-f', pattern], { stdio: 'pipe', timeout: 3000 }); } catch {}
+    // 6. Clean up stale log directories for phones that don't exist
+    try {
+      for (const dir of readdirSync(LOGS_DIR)) {
+        if (dir.startsWith('phone-') && !registeredIds.has(dir)) {
+          rmSync(join(LOGS_DIR, dir), { recursive: true, force: true });
+          this.logger.log(`Cleaned up orphaned logs: ${dir}`);
+        }
+      }
+    } catch {}
+
+    const phoneCount = this.db.getPhones().length;
+    if (phoneCount > 0) {
+      this.logger.log(`${phoneCount} registered phone(s) preserved in database`);
     }
+    this.logger.log('Startup cleanup complete');
   }
 
   private cleanupDisplay(displayNum: number) {
