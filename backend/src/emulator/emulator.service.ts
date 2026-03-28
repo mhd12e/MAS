@@ -69,6 +69,7 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
     }
 
     this.cleanupStaleResources();
+    this.rebootRegisteredPhones();
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -539,6 +540,62 @@ export class EmulatorService implements OnApplicationShutdown, OnModuleInit {
       this.logger.log(`${phoneCount} registered phone(s) preserved in database`);
     }
     this.logger.log('Startup cleanup complete');
+  }
+
+  /**
+   * Re-boot registered phones whose AVD files still exist.
+   * Runs async after cleanup — populates `instances` so GET /phones returns them.
+   */
+  private async rebootRegisteredPhones() {
+    const phones = this.db.getPhones();
+    if (phones.length === 0) return;
+
+    for (const phone of phones) {
+      const avdDir = join(this.avdHome, `${phone.id}.avd`);
+      if (!existsSync(avdDir)) {
+        this.logger.warn(`${phone.id}: AVD files missing — skipping reboot (delete and recreate)`);
+        continue;
+      }
+
+      try {
+        const slot = this.allocateSlot();
+        const displayNum = DISPLAY_BASE + slot;
+        const adbPort = ADB_PORT_BASE + slot * 2;
+        const vncPort = VNC_PORT_BASE + slot;
+        const novncPort = NOVNC_PORT_BASE + slot;
+
+        const logDir = join(LOGS_DIR, phone.id);
+        mkdirSync(logDir, { recursive: true });
+
+        const mp = (): ManagedProcess => ({ proc: null, restarts: 0, maxRestarts: 3, logStreams: [] });
+        const instance: EmulatorInstance = {
+          id: phone.id,
+          name: phone.name || phone.id,
+          index: slot,
+          displayNum,
+          adbPort,
+          vncPort,
+          novncPort,
+          status: 'booting',
+          processes: { xvfb: mp(), emulator: mp(), x11vnc: mp(), websockify: mp() },
+        };
+
+        this.instances.set(phone.id, instance);
+
+        // Clean stale locks in the AVD directory
+        for (const lock of ['hardware-qemu.ini.lock', 'multiinstance.lock']) {
+          const p = join(avdDir, lock);
+          if (existsSync(p)) rmSync(p);
+        }
+
+        // Boot — AVD already exists, no duplication needed
+        await this.startAll(instance);
+        this.monitorBoot(instance);
+        this.logger.log(`${phone.id}: rebooted on startup (slot ${slot})`);
+      } catch (err) {
+        this.logger.error(`${phone.id}: failed to reboot on startup:`, err);
+      }
+    }
   }
 
   private cleanupDisplay(displayNum: number) {
